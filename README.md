@@ -27,7 +27,7 @@ Styling: Tailwind CSS
 
 Clone the repository and install dependencies:
 
-git clone https://github.com/your-username/grocery-comparator.git
+git clone https://github.com/praveshjainnn/BasketBuddy
 cd grocery-comparator
 npm install
 
