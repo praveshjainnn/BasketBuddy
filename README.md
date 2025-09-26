@@ -1,30 +1,43 @@
-# Grocery list comparator
+# BasketBuddy
+A Next.js + Tailwind CSS based web application that helps users compare grocery product prices across different stores to make smarter purchase decisions.
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+🚀 Features
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/anujs-projects-7278297d/v0-grocery-list-comparator)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/3wZJTmoha03)
+Search groceries by name or category
 
-## Overview
+Compare prices from multiple stores
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+User-friendly responsive UI
+
+Built with Next.js, Tailwind CSS, and Node.js
+
+Easily deployable on Vercel (free hosting)
+
+🛠️ Tech Stack
+
+Frontend: Next.js, Tailwind CSS
+
+Backend : Node.js / Express (if APIs are added)
+
+Package Manager: npm
+
+Styling: Tailwind CSS
+
+📦 Installation
+
+Clone the repository and install dependencies:
+
+git clone https://github.com/your-username/grocery-comparator.git
+cd grocery-comparator
+npm install
+
+▶️ Running the Project
+
+Start the development server:
+
+npm run dev
 
 ## Deployment
 
 Your project is live at:
-
-**[https://vercel.com/anujs-projects-7278297d/v0-grocery-list-comparator](https://vercel.com/anujs-projects-7278297d/v0-grocery-list-comparator)**
-
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.app/chat/projects/3wZJTmoha03](https://v0.app/chat/projects/3wZJTmoha03)**
-
-## How It Works
-
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+https://basketbuddy-1.onrender.com/
