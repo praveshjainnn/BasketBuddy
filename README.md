@@ -1,6 +1,7 @@
 # BasketBuddy
 A Next.js + Tailwind CSS based web application that helps users compare grocery product prices across different stores to make smarter purchase decisions.
 
+Check Out: https://basketbuddy-1.onrender.com/
 🚀 Features
 
 Search groceries by name or category
@@ -28,7 +29,8 @@ Styling: Tailwind CSS
 Clone the repository and install dependencies:
 
 git clone https://github.com/praveshjainnn/BasketBuddy
-cd grocery-comparator
+
+cd basketbuddy
 npm install
 
 ▶️ Running the Project
