@@ -196,6 +196,71 @@ export function SetOperationsPanel({
         <p className="text-sm text-muted-foreground">Select lists to compare and analyze using set operations</p>
       </div>
 
+      {/* Visualization Section */}
+      {(selectedLists.length >= 2 || (activeOperation === "complement" && selectedLists.length === 1)) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Visualization</CardTitle>
+            <CardDescription>Visual representation of the current set operation</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-6">
+              {/* Bar Graph */}
+              <div className="p-4 border rounded-lg bg-background/50">
+                <h4 className="font-medium text-foreground mb-3">Item Distribution</h4>
+                <div className="h-64 flex items-end justify-around gap-2 pt-6 relative">
+                  {/* Category distribution bar chart */}
+                  {(() => {
+                    // Group items by category
+                    const categories = {};
+                    operationResults.forEach(item => {
+                      if (!categories[item.category]) {
+                        categories[item.category] = 0;
+                      }
+                      categories[item.category]++;
+                    });
+                    
+                    // Convert to array and sort
+                    const sortedCategories = Object.entries(categories)
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 5); // Show top 5 categories
+                    
+                    const maxCount = Math.max(...sortedCategories.map(c => c[1]));
+                    
+                    return sortedCategories.map(([category, count], index) => {
+                      const height = `${(count / maxCount) * 100}%`;
+                      const colors = [
+                        'bg-primary', 'bg-secondary', 'bg-accent',
+                        'bg-chart-3', 'bg-chart-4', 'bg-chart-5'
+                      ];
+                      
+                      return (
+                        <div key={category} className="flex flex-col items-center w-1/6">
+                          <div 
+                            className={`w-full ${colors[index % colors.length]} rounded-t`} 
+                            style={{ height }}
+                          >
+                            <div className="text-xs text-white font-medium text-center pt-1">{count}</div>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-2 truncate w-full text-center">
+                            {category}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()} 
+                  
+                  {/* Y-axis line */}
+                  <div className="absolute left-0 top-0 bottom-0 w-px bg-border"></div>
+                  {/* X-axis line */}
+                  <div className="absolute left-0 right-0 bottom-0 h-px bg-border"></div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* List Selection */}
       <Card>
         <CardHeader>

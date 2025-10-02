@@ -22,8 +22,10 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
+  Legend,
 } from "recharts"
-import { TrendingUp, Calendar, Users, ShoppingCart, Brain, Zap, Target, Award } from "lucide-react"
+import { TrendingUp, Calendar, Users, ShoppingCart, Brain, Zap, Target, Award, Plus, Inspect } from "lucide-react"
+import { SimpleVennControls } from "./simple-venn-controls"
 
 interface GroceryItem {
   id: string
@@ -59,7 +61,7 @@ interface VisualizationPanelProps {
 }
 
 export function VisualizationPanel({ groceryLists, familyMembers }: VisualizationPanelProps) {
-  const [activeView, setActiveView] = useState<"overview" | "trends" | "insights" | "predictions">("overview")
+  const [activeView, setActiveView] = useState<"overview" | "trends" | "insights" | "predictions" | "setops">("overview")
 
   const analytics = useMemo(() => {
     const allItems = groceryLists.flatMap((list) => list.items)
@@ -254,7 +256,7 @@ export function VisualizationPanel({ groceryLists, familyMembers }: Visualizatio
 
       {/* Advanced Tabs */}
       <Tabs value={activeView} onValueChange={(value) => setActiveView(value as any)} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 glass-effect">
+        <TabsList className="grid w-full grid-cols-5 glass-effect">
           <TabsTrigger value="overview" className="gap-2">
             <BarChart className="w-4 h-4" />
             Overview
@@ -270,6 +272,10 @@ export function VisualizationPanel({ groceryLists, familyMembers }: Visualizatio
           <TabsTrigger value="predictions" className="gap-2">
             <Zap className="w-4 h-4" />
             Predictions
+          </TabsTrigger>
+          <TabsTrigger value="setops" className="gap-2">
+            <Inspect className="w-4 h-4" />
+            Set Ops
           </TabsTrigger>
         </TabsList>
 
@@ -620,7 +626,145 @@ export function VisualizationPanel({ groceryLists, familyMembers }: Visualizatio
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="setops" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Venn Diagram Section */}
+            <SimpleVennControls 
+              groceryLists={groceryLists}
+            />
+            
+            {/* Bar Graph Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Set Operations Analysis</CardTitle>
+                <CardDescription>Bar chart visualization of set operations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {groceryLists.length >= 2 ? (
+                  <SetOperationsBarGraph groceryLists={groceryLists} />
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <p className="text-muted-foreground">You need at least 2 grocery lists to visualize set operations</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   )
+}
+
+// Set Operations Bar Graph Component
+function SetOperationsBarGraph({ groceryLists }: { groceryLists: GroceryList[] }) {
+  // Calculate set operations results
+  const setOperationsData = useMemo(() => {
+    if (groceryLists.length < 2) return [];
+    
+    // Get all unique items from all lists
+    const listItems = groceryLists.map(list => 
+      new Set(list.items.map(item => item.name.toLowerCase()))
+    );
+    
+    // Calculate different set operations
+    const operations = [
+      {
+        name: "Union (A ∪ B)",
+        value: new Set([...listItems[0], ...listItems[1]]).size,
+        fill: "#8884d8"
+      },
+      {
+        name: "Intersection (A ∩ B)",
+        value: [...listItems[0]].filter(item => listItems[1].has(item)).length,
+        fill: "#82ca9d"
+      },
+      {
+        name: "Difference (A - B)",
+        value: [...listItems[0]].filter(item => !listItems[1].has(item)).length,
+        fill: "#ffc658"
+      },
+      {
+        name: "Difference (B - A)",
+        value: [...listItems[1]].filter(item => !listItems[0].has(item)).length,
+        fill: "#ff8042"
+      },
+      {
+        name: "Symmetric Difference",
+        value: [...new Set([
+          ...[...listItems[0]].filter(item => !listItems[1].has(item)),
+          ...[...listItems[1]].filter(item => !listItems[0].has(item))
+        ])].length,
+        fill: "#0088fe"
+      }
+    ];
+    
+    return operations;
+  }, [groceryLists]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">Set Operations Comparison</h3>
+        <Badge variant="outline" className="text-xs">
+          Based on {groceryLists.length} lists
+        </Badge>
+      </div>
+      
+      <ResponsiveContainer width="100%" height={400}>
+        <BarChart data={setOperationsData} margin={{ top: 20, right: 30, left: 20, bottom: 70 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis 
+            dataKey="name" 
+            angle={-45} 
+            textAnchor="end" 
+            height={80} 
+            tick={{ fontSize: 12 }}
+          />
+          <YAxis label={{ value: 'Number of Items', angle: -90, position: 'insideLeft' }} />
+          <Tooltip 
+            formatter={(value) => [`${value} items`, 'Count']}
+            labelFormatter={(label) => `Operation: ${label}`}
+          />
+          <Legend verticalAlign="top" height={36} />
+          <Bar 
+            dataKey="value" 
+            name="Items Count" 
+            animationBegin={0}
+            animationDuration={1200}
+          >
+            {setOperationsData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.fill} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="p-4 rounded-lg bg-card/50 border border-border">
+          <h4 className="font-medium mb-2 flex items-center gap-2">
+            <Brain className="w-4 h-4" /> Set Operations Explained
+          </h4>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li><strong>Union (A ∪ B):</strong> All items from both lists combined</li>
+            <li><strong>Intersection (A ∩ B):</strong> Items common to both lists</li>
+            <li><strong>Difference (A - B):</strong> Items in first list but not in second</li>
+            <li><strong>Difference (B - A):</strong> Items in second list but not in first</li>
+            <li><strong>Symmetric Difference:</strong> Items in either list but not in both</li>
+          </ul>
+        </div>
+        <div className="p-4 rounded-lg bg-card/50 border border-border">
+          <h4 className="font-medium mb-2 flex items-center gap-2">
+            <Zap className="w-4 h-4" /> Insights
+          </h4>
+          <ul className="space-y-2 text-sm text-muted-foreground">
+            <li>Higher intersection values indicate more similar lists</li>
+            <li>Large differences suggest unique shopping patterns</li>
+            <li>Compare your most recent lists to see shopping pattern changes</li>
+            <li>Symmetric difference shows overall list uniqueness</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
 }
