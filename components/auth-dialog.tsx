@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +7,9 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LogIn, UserPlus, Mail, Lock, User } from "lucide-react"
+import { auth, googleProvider } from "@/lib/firebase"
+
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, signInWithPopup } from "firebase/auth"
 
 interface AuthDialogProps {
   open: boolean
@@ -24,22 +25,26 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, loginForm.email, loginForm.password)
+      const firebaseUser = userCredential.user
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+      const user = {
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName || loginForm.email.split("@")[0],
+        email: firebaseUser.email!,
+        avatar: firebaseUser.photoURL || "👤",
+      }
 
-    // Mock successful login
-    const user = {
-      id: "1",
-      name: loginForm.email.split("@")[0],
-      email: loginForm.email,
-      avatar: "👤",
+      localStorage.setItem("currentUser", JSON.stringify(user))
+      onAuthSuccess(user)
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Login error:", error)
+      alert("Login failed. Please check your email and password.")
+    } finally {
+      setIsLoading(false)
     }
-
-    localStorage.setItem("currentUser", JSON.stringify(user))
-    onAuthSuccess(user)
-    onOpenChange(false)
-    setIsLoading(false)
   }
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -50,42 +55,53 @@ export function AuthDialog({ open, onOpenChange, onAuthSuccess }: AuthDialogProp
     }
 
     setIsLoading(true)
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, signupForm.email, signupForm.password)
+      const firebaseUser = userCredential.user
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Update display name
+      await updateProfile(firebaseUser, { displayName: signupForm.name })
 
-    // Mock successful signup
-    const user = {
-      id: Date.now().toString(),
-      name: signupForm.name,
-      email: signupForm.email,
-      avatar: "👤",
+      const user = {
+        id: firebaseUser.uid,
+        name: signupForm.name,
+        email: firebaseUser.email!,
+        avatar: firebaseUser.photoURL || "👤",
+      }
+
+      localStorage.setItem("currentUser", JSON.stringify(user))
+      onAuthSuccess(user)
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Signup error:", error)
+      alert("Signup failed. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
-
-    localStorage.setItem("currentUser", JSON.stringify(user))
-    onAuthSuccess(user)
-    onOpenChange(false)
-    setIsLoading(false)
   }
 
   const handleGoogleAuth = async () => {
     setIsLoading(true)
+    try {
+      const result = await signInWithPopup(auth, googleProvider)
+      const firebaseUser = result.user
 
-    // Simulate OAuth flow
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+      const user = {
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName || "Google User",
+        email: firebaseUser.email!,
+        avatar: firebaseUser.photoURL || "👤",
+      }
 
-    // Mock successful Google auth
-    const user = {
-      id: "google_" + Date.now(),
-      name: "Google User",
-      email: "user@gmail.com",
-      avatar: "👤",
+      localStorage.setItem("currentUser", JSON.stringify(user))
+      onAuthSuccess(user)
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Google auth error:", error)
+      alert("Google sign-in failed. Please try again.")
+    } finally {
+      setIsLoading(false)
     }
-
-    localStorage.setItem("currentUser", JSON.stringify(user))
-    onAuthSuccess(user)
-    onOpenChange(false)
-    setIsLoading(false)
   }
 
   return (

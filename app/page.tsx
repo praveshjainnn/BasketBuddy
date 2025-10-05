@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect, Suspense, useRef } from "react"
+import { useState, useEffect, Suspense } from "react"
 import dynamic from "next/dynamic"
-// Move three.js imports into client-only components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -24,6 +23,7 @@ import {
 } from "lucide-react"
 import { GroceryListManager } from "@/components/grocery-list-manager"
 import { CSVImport } from "@/components/csv-import"
+import { UploadToFirestore } from "@/components/upload-to-firestore"
 import { MemberManagement } from "@/components/member-management"
 import { UserProfile as UserProfilePanel } from "@/components/user-profile"
 import { SetOperationsPanel } from "@/components/set-operations-panel"
@@ -31,6 +31,7 @@ import { VisualizationPanel } from "@/components/visualization-panel"
 import { AuthDialog } from "@/components/auth-dialog"
 import { SmartAIAssistant } from "@/components/smart-ai-assistant"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { AuthProvider, useAuth, FirebaseAuth } from "@/components/firebase-auth"
 const Hero3D = dynamic(() => import("@/components/hero-3d"), { ssr: false })
 const HeroParticles = dynamic(() => import("@/components/hero-particles"), { ssr: false })
 
@@ -64,6 +65,7 @@ interface FamilyMember {
 }
 
 export default function GroceryComparatorApp() {
+  const { user, loading } = useAuth() // Use Firebase auth state
   const [groceryLists, setGroceryLists] = useState<GroceryList[]>([])
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
     { id: "1", name: "Mom", email: "mom@family.com", avatar: "M" },
@@ -72,7 +74,6 @@ export default function GroceryComparatorApp() {
   ])
   const [selectedLists, setSelectedLists] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState("lists")
-  const [currentUser, setCurrentUser] = useState<FamilyMember | null>(null)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
 
   useEffect(() => {
@@ -113,6 +114,7 @@ export default function GroceryComparatorApp() {
             {
               id: "2",
               name: "Bread",
+              price: 2.49,
               category: "Bakery",
               quantity: 1,
               unit: "loaf",
@@ -122,13 +124,14 @@ export default function GroceryComparatorApp() {
             {
               id: "3",
               name: "Apples",
+              price: 4.99,
               category: "Produce",
               quantity: 6,
               unit: "pieces",
               addedBy: "2",
               addedAt: new Date(),
             },
-            { id: "4", name: "Chicken", category: "Meat", quantity: 1, unit: "kg", addedBy: "1", addedAt: new Date() },
+            { id: "4", name: "Chicken", price: 8.99, category: "Meat", quantity: 1, unit: "kg", addedBy: "1", addedAt: new Date() },
           ],
         },
         {
@@ -143,6 +146,7 @@ export default function GroceryComparatorApp() {
             {
               id: "5",
               name: "Chips",
+              price: 3.99,
               category: "Snacks",
               quantity: 3,
               unit: "bags",
@@ -152,6 +156,7 @@ export default function GroceryComparatorApp() {
             {
               id: "6",
               name: "Soda",
+              price: 5.99,
               category: "Beverages",
               quantity: 12,
               unit: "cans",
@@ -161,6 +166,7 @@ export default function GroceryComparatorApp() {
             {
               id: "7",
               name: "Ice Cream",
+              price: 6.99,
               category: "Frozen",
               quantity: 2,
               unit: "tubs",
@@ -170,6 +176,7 @@ export default function GroceryComparatorApp() {
             {
               id: "8",
               name: "Apples",
+              price: 3.99,
               category: "Produce",
               quantity: 4,
               unit: "pieces",
@@ -187,14 +194,57 @@ export default function GroceryComparatorApp() {
     localStorage.setItem("groceryLists", JSON.stringify(groceryLists))
   }, [groceryLists])
 
+  // Firebase auth handles user state automatically
+  
+  // Load grocery lists from Firestore when user logs in
   useEffect(() => {
-    const savedUser = localStorage.getItem("currentUser")
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser))
-    }
-  }, [])
+    const loadListsFromFirestore = async () => {
+      if (!user) return;
+      
+      try {
+        const { firestore } = await import("@/lib/firebase");
+        const { collection, query, where, getDocs } = await import("firebase/firestore");
+        
+        if (firestore) {
+          const q = query(
+            collection(firestore, "groceryLists"),
+            where("userId", "==", user.uid)
+          );
+          
+          const querySnapshot = await getDocs(q);
+          const firestoreLists: GroceryList[] = [];
+          
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            firestoreLists.push({
+              id: doc.id,
+              name: data.name,
+              description: data.description,
+              createdBy: data.createdBy,
+              createdAt: new Date(data.createdAt),
+              sharedWith: data.sharedWith || [],
+              color: data.color,
+              items: data.items.map((item: any) => ({
+                ...item,
+                addedAt: new Date(item.addedAt)
+              }))
+            });
+          });
+          
+          if (firestoreLists.length > 0) {
+            setGroceryLists(firestoreLists);
+            console.log(`Loaded ${firestoreLists.length} lists from Firestore`);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading lists from Firestore:", error);
+      }
+    };
+    
+    loadListsFromFirestore();
+  }, [user])
 
-  const addGroceryList = (newList: Omit<GroceryList, "id" | "createdAt">) => {
+  const addGroceryList = async (newList: Omit<GroceryList, "id" | "createdAt">) => {
     try {
       // Add additional validation
       if (!newList || !newList.name || !newList.name.trim()) {
@@ -216,19 +266,81 @@ export default function GroceryComparatorApp() {
       // Update state with the new list
       setGroceryLists((prev) => [...prev, list]);
       console.log("List added successfully:", JSON.stringify(list));
+      
+      // Save to Firestore if user is logged in
+      if (user) {
+        try {
+          const { firestore } = await import("@/lib/firebase");
+          const { collection, addDoc } = await import("firebase/firestore");
+          
+          if (firestore) {
+            await addDoc(collection(firestore, "groceryLists"), {
+              ...list,
+              userId: user.uid,
+              createdAt: list.createdAt.toISOString(),
+              items: list.items.map(item => ({
+                ...item,
+                addedAt: item.addedAt.toISOString()
+              }))
+            });
+            console.log("List saved to Firestore");
+          }
+        } catch (firestoreError) {
+          console.error("Error saving to Firestore:", firestoreError);
+          // Don't fail the whole operation if Firestore save fails
+        }
+      }
     } catch (error) {
       console.error("Error adding grocery list:", error);
       alert("Error adding grocery list. Please try again.");
     }
   }
 
-  const updateGroceryList = (id: string, updates: Partial<GroceryList>) => {
+  const updateGroceryList = async (id: string, updates: Partial<GroceryList>) => {
     setGroceryLists((prev) => prev.map((list) => (list.id === id ? { ...list, ...updates } : list)))
+    
+    // Update in Firestore if user is logged in
+    if (user) {
+      try {
+        const { firestore } = await import("@/lib/firebase");
+        const { doc, updateDoc } = await import("firebase/firestore");
+        
+        if (firestore) {
+          const docRef = doc(firestore, "groceryLists", id);
+          await updateDoc(docRef, {
+            ...updates,
+            items: updates.items?.map(item => ({
+              ...item,
+              addedAt: item.addedAt instanceof Date ? item.addedAt.toISOString() : item.addedAt
+            }))
+          });
+          console.log("List updated in Firestore");
+        }
+      } catch (error) {
+        console.error("Error updating list in Firestore:", error);
+      }
+    }
   }
 
-  const deleteGroceryList = (id: string) => {
+  const deleteGroceryList = async (id: string) => {
     setGroceryLists((prev) => prev.filter((list) => list.id !== id))
     setSelectedLists((prev) => prev.filter((listId) => listId !== id))
+    
+    // Delete from Firestore if user is logged in
+    if (user) {
+      try {
+        const { firestore } = await import("@/lib/firebase");
+        const { doc, deleteDoc } = await import("firebase/firestore");
+        
+        if (firestore) {
+          const docRef = doc(firestore, "groceryLists", id);
+          await deleteDoc(docRef);
+          console.log("List deleted from Firestore");
+        }
+      } catch (error) {
+        console.error("Error deleting list from Firestore:", error);
+      }
+    }
   }
 
   // Member Management handlers with local state update (can be backed by API later)
@@ -243,10 +355,6 @@ export default function GroceryComparatorApp() {
 
   const deleteMember = (id: string) => {
     setFamilyMembers((prev) => prev.filter((m) => m.id !== id))
-    if (currentUser?.id === id) {
-      setCurrentUser(null)
-      localStorage.removeItem("currentUser")
-    }
   }
 
   const toggleListSelection = (listId: string) => {
@@ -261,14 +369,9 @@ export default function GroceryComparatorApp() {
     return groceryLists.filter((list) => list.sharedWith.length > 0).length
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("currentUser")
-    setCurrentUser(null)
-  }
-
   const handleAuthSuccess = (user: FamilyMember) => {
-    setCurrentUser(user)
-    localStorage.setItem("currentUser", JSON.stringify(user))
+    // Firebase auth handles user state automatically
+    setShowAuthDialog(false)
   }
 
   const handleAddRecommendation = (listId: string, items: string[]) => {
@@ -277,6 +380,7 @@ export default function GroceryComparatorApp() {
       const newItems = items.map((itemName) => ({
         id: Date.now().toString() + Math.random(),
         name: itemName,
+        price: 0,
         category: "AI Recommended",
         quantity: 1,
         unit: "piece",
@@ -304,51 +408,26 @@ export default function GroceryComparatorApp() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {currentUser ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="gap-1 animate-morph-in micro-hover">
-                      <Users className="w-3 h-3" />
-                      {familyMembers.length} members
-                    </Badge>
-                    <Badge variant="outline" className="gap-1 animate-morph-in micro-hover">
-                      <Sparkles className="w-3 h-3" />
-                      {groceryLists.length} lists
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 pl-2 border-l border-border/50">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center text-sm animate-bounce-gentle">
-                        {currentUser.avatar}
-                      </div>
-                      <span className="text-sm font-medium text-foreground">{currentUser.name}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleLogout}
-                      className="hover:bg-destructive/10 micro-hover micro-click"
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <Button
-                  onClick={() => setShowAuthDialog(true)}
-                  className="btn-advanced bg-gradient-to-r from-primary to-secondary hover:shadow-lg transition-all duration-300"
-                >
-                  <Zap className="w-4 h-4 mr-2" />
-                  Get Started
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="gap-1 animate-morph-in micro-hover">
+                  <Users className="w-3 h-3" />
+                  {familyMembers.length} members
+                </Badge>
+                <Badge variant="outline" className="gap-1 animate-morph-in micro-hover">
+                  <Sparkles className="w-3 h-3" />
+                  {groceryLists.length} lists
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2 pl-2 border-l border-border/50">
+                <FirebaseAuth />
+              </div>
               <ThemeToggle />
             </div>
           </div>
         </div>
       </header>
 
-      {!currentUser ? (
+      {!user ? (
         <main className="relative overflow-hidden immersive-bg">
           <section className="h-screen relative">
             <div className="absolute inset-0 z-0">
@@ -615,8 +694,9 @@ export default function GroceryComparatorApp() {
             </TabsList>
 
             <TabsContent value="lists" className="space-y-4">
-              <div className="flex justify-end pointer-events-auto relative z-20">
-                <CSVImport familyMembers={familyMembers} onImportList={addGroceryList} />
+              <div className="flex justify-end gap-2 pointer-events-auto relative z-20">
+                <UploadToFirestore groceryLists={groceryLists} />
+                <CSVImport onImportList={addGroceryList} />
               </div>
               <GroceryListManager
                 groceryLists={groceryLists}
@@ -626,7 +706,7 @@ export default function GroceryComparatorApp() {
                 onDeleteList={deleteGroceryList}
                 selectedLists={selectedLists}
                 onToggleSelection={toggleListSelection}
-                currentUserId={currentUser?.id}
+                currentUserId={user?.uid}
               />
             </TabsContent>
 
@@ -661,11 +741,14 @@ export default function GroceryComparatorApp() {
             </TabsContent>
 
             <TabsContent value="profile" className="space-y-4">
-              <UserProfilePanel currentUser={currentUser ?? undefined} onUpdateUser={(u) => {
-                if (!currentUser) return
-                const updated = { ...currentUser, ...u }
-                setCurrentUser(updated)
-                localStorage.setItem("currentUser", JSON.stringify(updated))
+              <UserProfilePanel currentUser={user ? {
+                id: user.uid,
+                name: user.displayName || user.email?.split('@')[0] || 'User',
+                email: user.email || '',
+                avatar: user.photoURL || ''
+              } : undefined} onUpdateUser={(u) => {
+                // Profile updates handled by Firebase
+                console.log('Profile update:', u)
               }} />
             </TabsContent>
           </Tabs>
