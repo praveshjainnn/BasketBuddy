@@ -1,0 +1,21 @@
+item_name,category,quantity,base_price,expiry_date
+Whole Milk,Dairy,15,5.99,2024-10-27
+Greek Yogurt,Dairy,20,4.49,2024-10-26
+Cheddar Cheese,Dairy,12,7.99,2024-10-28
+Bananas,Fruit,30,2.99,2024-10-28
+Strawberries,Fruit,10,6.99,2024-10-26
+Apples,Fruit,25,4.99,2024-10-29
+Oranges,Fruit,18,5.49,2024-10-27
+Chicken Breast,Meat,8,12.99,2024-10-27
+Ground Beef,Meat,12,9.99,2024-10-26
+Pork Chops,Meat,10,11.49,2024-10-28
+Lettuce,Vegetable,25,3.49,2024-10-28
+Tomatoes,Vegetable,18,4.99,2024-10-27
+Carrots,Vegetable,22,3.99,2024-10-29
+Broccoli,Vegetable,15,4.49,2024-10-26
+Bread,Bakery,20,3.99,2024-10-26
+Croissants,Bakery,15,5.99,2024-10-27
+Bagels,Bakery,18,4.49,2024-10-28
+Salmon Fillet,Seafood,6,15.99,2024-10-27
+Shrimp,Seafood,8,18.99,2024-10-26
+Orange Juice,Beverage,12,6.99,2024-10-28

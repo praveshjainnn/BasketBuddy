@@ -15,11 +15,13 @@ import {
   Zap,
   Brain,
   TrendingUp,
+  TrendingDown,
   Shield,
   Layers,
   Cpu,
   Database,
   Rocket,
+  Lock,
 } from "lucide-react"
 import { GroceryListManager } from "@/components/grocery-list-manager"
 import { CSVImport } from "@/components/csv-import"
@@ -32,6 +34,8 @@ import { AuthDialog } from "@/components/auth-dialog"
 import { SmartAIAssistant } from "@/components/smart-ai-assistant"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { AuthProvider, useAuth, FirebaseAuth } from "@/components/firebase-auth"
+import PerishableDeals from "@/components/user/PerishableDeals"
+import { useToast } from "@/components/ui/use-toast"
 const Hero3D = dynamic(() => import("@/components/hero-3d"), { ssr: false })
 const HeroParticles = dynamic(() => import("@/components/hero-particles"), { ssr: false })
 
@@ -75,6 +79,18 @@ export default function GroceryComparatorApp() {
   const [selectedLists, setSelectedLists] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState("lists")
   const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const { toast } = useToast()
+
+  // Listen for global add-to-cart events from Deals as a safety net
+  useEffect(() => {
+    const handler = (e: any) => {
+      if (e?.detail) {
+        addDealItemToList(e.detail)
+      }
+    }
+    window.addEventListener('bb:addDealItem', handler)
+    return () => window.removeEventListener('bb:addDealItem', handler)
+  }, [groceryLists, user])
 
   useEffect(() => {
     const savedLists = localStorage.getItem("groceryLists")
@@ -393,6 +409,59 @@ export default function GroceryComparatorApp() {
     }
   }
 
+  // Add an item from Deals to a dedicated list (creates it if it doesn't exist)
+  const addDealItemToList = async (dealItem: {
+    id: number
+    item_name: string
+    category: string
+    quantity: number
+    discounted_price: number
+  }) => {
+    const DEALS_LIST_NAME = "Deals Cart"
+    // Prepare GroceryItem from deal item
+    const groceryItem = {
+      id: Date.now().toString() + "-deal",
+      name: dealItem.item_name,
+      category: dealItem.category,
+      quantity: Math.max(1, Math.min(dealItem.quantity || 1, 99)),
+      unit: "piece",
+      price: Number(dealItem.discounted_price) || 0,
+      addedBy: user?.uid || "deals",
+      addedAt: new Date(),
+    }
+
+    // Immediately switch tab for instant feedback
+    setActiveTab("lists")
+
+    let selectedId = ""
+    setGroceryLists((prev) => {
+      const existing = prev.find((l) => l.name === DEALS_LIST_NAME)
+      if (existing) {
+        selectedId = existing.id
+        return prev.map((l) =>
+          l.id === existing.id ? { ...l, items: [...l.items, groceryItem] } : l,
+        )
+      }
+      const newList: GroceryList = {
+        id: Date.now().toString() + "-deals-list",
+        name: DEALS_LIST_NAME,
+        description: "Items added from Perishable Deals",
+        createdBy: user?.uid || "deals",
+        createdAt: new Date(),
+        sharedWith: [],
+        color: "bg-gradient-to-br from-primary/20 to-secondary/10",
+        items: [groceryItem],
+      }
+      selectedId = newList.id
+      return [...prev, newList]
+    })
+
+    if (selectedId) {
+      setSelectedLists((prev) => Array.from(new Set([...(prev || []), selectedId])))
+    }
+    toast({ title: "Added to Deals Cart", description: `${groceryItem.name} added successfully.` })
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="glass-effect border-b sticky top-0 z-[100] animate-slide-up">
@@ -421,6 +490,15 @@ export default function GroceryComparatorApp() {
               <div className="flex items-center gap-2 pl-2 border-l border-border/50">
                 <FirebaseAuth />
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/50 hover:from-orange-500/20 hover:to-red-500/20"
+                onClick={() => window.location.href = '/admin'}
+              >
+                <Lock className="w-4 h-4" />
+                Admin Portal
+              </Button>
               <ThemeToggle />
             </div>
           </div>
@@ -454,7 +532,15 @@ export default function GroceryComparatorApp() {
                     <Sparkles className="w-5 h-5 mr-2" />
                     Start Your Journey
                   </Button>
-             
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => window.location.href = '/admin'}
+                    className="btn-advanced bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/50 hover:from-orange-500/20 hover:to-red-500/20 hover:shadow-xl transition-all duration-300 text-lg px-8 py-4 micro-click"
+                  >
+                    <Lock className="w-5 h-5 mr-2" />
+                    Admin Portal
+                  </Button>
                 </div>
 
                 <div className="flex items-center justify-center gap-8 text-sm text-muted-foreground animate-slide-up">
@@ -654,7 +740,7 @@ export default function GroceryComparatorApp() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 glass-effect">
+            <TabsList className="grid w-full grid-cols-7 glass-effect">
               <TabsTrigger
                 value="lists"
                 className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-secondary"
@@ -690,6 +776,12 @@ export default function GroceryComparatorApp() {
                 className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-secondary"
               >
                 <Users className="w-4 h-4" /> Profile
+              </TabsTrigger>
+              <TabsTrigger
+                value="deals"
+                className="gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-secondary"
+              >
+                <TrendingDown className="w-4 h-4" /> Deals
               </TabsTrigger>
             </TabsList>
 
@@ -749,6 +841,18 @@ export default function GroceryComparatorApp() {
               } : undefined} onUpdateUser={(u) => {
                 // Profile updates handled by Firebase
                 console.log('Profile update:', u)
+              }} />
+            </TabsContent>
+
+            <TabsContent value="deals" className="space-y-4 pointer-events-auto">
+              <PerishableDeals onAddToCart={(item) => {
+                addDealItemToList({
+                  id: item.id,
+                  item_name: item.item_name,
+                  category: item.category,
+                  quantity: item.quantity,
+                  discounted_price: item.discounted_price,
+                })
               }} />
             </TabsContent>
           </Tabs>

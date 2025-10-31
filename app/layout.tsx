@@ -7,8 +7,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/components/firebase-auth'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'Basket Buddy 2.0 - Smart Grocery Management',
+  description: 'AI-driven grocery management with dynamic discounting and waste reduction',
   generator: 'v0.app',
 }
 
