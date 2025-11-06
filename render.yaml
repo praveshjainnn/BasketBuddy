@@ -19,11 +19,15 @@ services:
   - type: web
     name: basketbuddy-backend
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      python -m pip install --upgrade pip
+      pip install --no-cache-dir -r requirements-minimal.txt
     startCommand: gunicorn backend.app:app
     envVars:
       - key: PYTHON_VERSION
         value: "3.9.0"
+      - key: PIP_VERSION
+        value: "22.3.1"
       - key: FLASK_APP
         value: "backend.app"
       - key: FLASK_ENV

@@ -1,3 +1,6 @@
+--no-binary=:all:
+--only-binary :none:
+
 absl-py==2.2.1
 alembic==1.12.1
 altair==5.5.0

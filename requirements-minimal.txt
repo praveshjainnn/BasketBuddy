@@ -1,0 +1,32 @@
+# Core
+Flask==2.3.3
+Werkzeug==2.3.7
+Jinja2==3.1.2
+itsdangerous==2.1.2
+click==8.1.7
+
+# Database
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# Authentication
+Flask-Login==0.6.3
+Flask-WTF==1.2.1
+email-validator==2.1.0
+
+# API
+Flask-RESTful==0.3.10
+Flask-Cors==4.0.0
+
+# Production
+gunicorn==21.2.0
+python-dotenv==1.0.1
+
+# Utils
+python-dateutil==2.8.2
+pytz==2023.3
+requests==2.31.0
+
+# Add other essential packages your app specifically needs
+# Remove the ones you don't need
