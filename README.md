@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # BasketBuddy: Smart Grocery Deals, Lists and Set-Theory Comparisons
 
 ## Abstract
@@ -134,3 +135,6 @@ Optional: Configure Firebase (see `lib/firebase.ts`) to enable login and Firesto
 - Empirical evaluation can report (i) time saved in planning, (ii) monetary savings from intersections where seller prices are lower, and (iii) overlap metrics such as Jaccard similarity: \( J(U,S)=\frac{|U\cap S|}{|U\cup S|} \).
 
 
+=======
+# BasketBuddy
+>>>>>>> c81525357f1b4d4fdf244ac7983c166637f78dd2
